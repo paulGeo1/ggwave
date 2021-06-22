@@ -44,6 +44,16 @@ extern "C" {
         GGWAVE_TX_PROTOCOL_DT_NORMAL,
         GGWAVE_TX_PROTOCOL_DT_FAST,
         GGWAVE_TX_PROTOCOL_DT_FASTEST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_EDGE_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_EDGE_FAST,
     } ggwave_TxProtocolId;
 
     // GGWave instance parameters
@@ -226,9 +236,11 @@ public:
     static constexpr auto kBaseSampleRate = 48000.0f;
     static constexpr auto kSampleRateMin = 6000.0f;
     static constexpr auto kSampleRateMax = 96000.0f;
-    static constexpr auto kDefaultSamplesPerFrame = 1024;
+    static constexpr auto kDefaultSamplesPerFrame = 2048;
     static constexpr auto kDefaultVolume = 10;
     static constexpr auto kDefaultSoundMarkerThreshold = 3.0f;
+    static constexpr auto kDefaultMarkerFrames = 16;
+    static constexpr auto kDefaultEncodedDataOffset = 3;
     static constexpr auto kMaxSamplesPerFrame = 2048;
     static constexpr auto kMaxDataBits = 256;
     static constexpr auto kMaxDataSize = 256;
@@ -268,10 +280,43 @@ public:
             { GGWAVE_TX_PROTOCOL_DT_NORMAL,             { "[DT] Normal",  24,  9, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FAST,               { "[DT] Fast",    24,  6, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FASTEST,            { "[DT] Fastest", 24,  3, 1, } },
+
+            /*
+             * Duc Vo Custom Note: Add new protocol in here with range
+             * [TxProtocol.freqStart*dF - (TxProtocol.freqStart + TxProtocol.bytesPerTx*32)*dF]
+             * Frequency: [202500Hz - 217500Hz]
+             * P/s: must define enum TxProtocol ids such as 'GGWAVE_TX_PROTOCOL_ULTRASOUND_REAL_0'
+             * */
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K-19.5K",         384,  9, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,    { "18K-19.5K Fast",    384,  3, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,  { "19.5k-21k",         416,  9, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,    { "21k-22.5k Fast",    416,  3, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,  { "21k-22.5k",         448,  9, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,    { "21k-22.5k Fast",    448,  3, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,  { "22.5k-24k",         480,  9, 1, }},
+            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,    { "22.5k-24k Fast",    480,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K",         384*2,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,    { "18K Fast",    384*2,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,  { "19.5K",       416*2,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,    { "19.5k Fast",  416*2,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,  { "21k",         448*2,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,    { "21k Fast",    448*2,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,  { "22.5k",       480*2,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,    { "22.5k Fast",  480*2,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_EDGE_NORMAL,  { "23250",         992,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_EDGE_FAST,    { "23250 Fast",    992,  3, 1, }},
         };
 
         return kTxProtocols;
     }
+
+    struct ToneData {
+        double freq_hz;
+        double duration_ms;
+    };
+
+    using Tones = std::vector<ToneData>;
+    using WaveformTones = std::vector<Tones>;
 
     using AmplitudeData    = std::vector<float>;
     using AmplitudeDataI16 = std::vector<int16_t>;
@@ -352,6 +397,12 @@ public:
     static const TxProtocol & getDefaultTxProtocol() { return getTxProtocols().at(getDefaultTxProtocolId()); }
     static const TxProtocol & getTxProtocol(int id)  { return getTxProtocols().at(TxProtocolId(id)); }
     static const TxProtocol & getTxProtocol(TxProtocolId id) { return getTxProtocols().at(id); }
+
+    // get a list of the tones generated for the last waveform
+    //
+    //   Call this method after calling encode() to get a list of the tones participating in the generated waveform
+    //
+    const WaveformTones & getWaveformTones() { return m_waveformTones; }
 
     bool takeTxAmplitudeI16(AmplitudeDataI16 & dst);
 
@@ -471,6 +522,7 @@ private:
     TxRxData m_outputBlockTmp;
     AmplitudeDataI16 m_outputBlockI16;
     AmplitudeDataI16 m_txAmplitudeDataI16;
+    WaveformTones m_waveformTones;
 
     // Impl
     // todo : move all members inside Impl
