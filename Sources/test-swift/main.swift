@@ -1,7 +1,7 @@
 import ggwave
 
 var parameters = ggwave_getDefaultParameters()
-
+parameters.payloadLength = 4
 parameters.sampleFormatInp = GGWAVE_SAMPLE_FORMAT_I16
 parameters.sampleFormatOut = GGWAVE_SAMPLE_FORMAT_I16
 

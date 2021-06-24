@@ -44,7 +44,7 @@ extern "C" {
         GGWAVE_TX_PROTOCOL_DT_NORMAL,
         GGWAVE_TX_PROTOCOL_DT_FAST,
         GGWAVE_TX_PROTOCOL_DT_FASTEST,
-        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,
+		GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,
         GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,
         GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,
         GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,
@@ -76,10 +76,9 @@ extern "C" {
     //
     typedef struct {
         int payloadLength;                      // payload length
-        float sampleRateInp;                    // capture sample rate
-        float sampleRateOut;                    // playback sample rate
+        int sampleRateInp;                      // capture sample rate
+        int sampleRateOut;                      // playback sample rate
         int samplesPerFrame;                    // number of samples per audio frame
-        float soundMarkerThreshold;             // sound marker detection threshold
         ggwave_SampleFormat sampleFormatInp;    // format of the captured audio samples
         ggwave_SampleFormat sampleFormatOut;    // format of the playback audio samples
     } ggwave_Parameters;
@@ -233,14 +232,9 @@ extern "C" {
 
 class GGWave {
 public:
-    static constexpr auto kBaseSampleRate = 48000.0f;
-    static constexpr auto kSampleRateMin = 6000.0f;
-    static constexpr auto kSampleRateMax = 96000.0f;
+    static constexpr auto kBaseSampleRate = 48000;
     static constexpr auto kDefaultSamplesPerFrame = 2048;
     static constexpr auto kDefaultVolume = 10;
-    static constexpr auto kDefaultSoundMarkerThreshold = 3.0f;
-    static constexpr auto kDefaultMarkerFrames = 16;
-    static constexpr auto kDefaultEncodedDataOffset = 3;
     static constexpr auto kMaxSamplesPerFrame = 2048;
     static constexpr auto kMaxDataBits = 256;
     static constexpr auto kMaxDataSize = 256;
@@ -252,7 +246,6 @@ public:
     using Parameters   = ggwave_Parameters;
     using SampleFormat = ggwave_SampleFormat;
     using TxProtocolId = ggwave_TxProtocolId;
-    using RxProtocolId = ggwave_TxProtocolId;
 
     struct TxProtocol {
         const char * name;  // string identifier of the protocol
@@ -264,10 +257,7 @@ public:
         int nDataBitsPerTx() const { return 8*bytesPerTx; }
     };
 
-    using RxProtocol = TxProtocol;
-
     using TxProtocols = std::map<TxProtocolId, TxProtocol>;
-    using RxProtocols = std::map<RxProtocolId, RxProtocol>;
 
     static const TxProtocols & getTxProtocols() {
         static const TxProtocols kTxProtocols {
@@ -280,22 +270,7 @@ public:
             { GGWAVE_TX_PROTOCOL_DT_NORMAL,             { "[DT] Normal",  24,  9, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FAST,               { "[DT] Fast",    24,  6, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FASTEST,            { "[DT] Fastest", 24,  3, 1, } },
-
-            /*
-             * Duc Vo Custom Note: Add new protocol in here with range
-             * [TxProtocol.freqStart*dF - (TxProtocol.freqStart + TxProtocol.bytesPerTx*32)*dF]
-             * Frequency: [202500Hz - 217500Hz]
-             * P/s: must define enum TxProtocol ids such as 'GGWAVE_TX_PROTOCOL_ULTRASOUND_REAL_0'
-             * */
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K-19.5K",         384,  9, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,    { "18K-19.5K Fast",    384,  3, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,  { "19.5k-21k",         416,  9, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,    { "21k-22.5k Fast",    416,  3, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,  { "21k-22.5k",         448,  9, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,    { "21k-22.5k Fast",    448,  3, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,  { "22.5k-24k",         480,  9, 1, }},
-            // { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,    { "22.5k-24k Fast",    480,  3, 1, }},
-            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K",         384*2,  9, 1, }},
+			{ GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K",         384*2,  9, 1, }},
             { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,    { "18K Fast",    384*2,  3, 1, }},
             { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,  { "19.5K",       416*2,  9, 1, }},
             { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,    { "19.5k Fast",  416*2,  3, 1, }},
@@ -309,14 +284,6 @@ public:
 
         return kTxProtocols;
     }
-
-    struct ToneData {
-        double freq_hz;
-        double duration_ms;
-    };
-
-    using Tones = std::vector<ToneData>;
-    using WaveformTones = std::vector<Tones>;
 
     using AmplitudeData    = std::vector<float>;
     using AmplitudeDataI16 = std::vector<int16_t>;
@@ -345,17 +312,9 @@ public:
     bool init(int dataSize, const char * dataBuffer, const TxProtocol & txProtocol, const int volume = kDefaultVolume);
 
     // expected waveform size of the encoded Tx data in bytes
-    //
-    //   When the output sampling rate is not equal to kBaseSampleRate the result of this method is overestimation of
-    //   the actual number of bytes that would be produced
-    //
     uint32_t encodeSize_bytes() const;
 
     // expected waveform size of the encoded Tx data in samples
-    //
-    //   When the output sampling rate is not equal to kBaseSampleRate the result of this method is overestimation of
-    //   the actual number of samples that would be produced
-    //
     uint32_t encodeSize_samples() const;
 
     // encode Tx data into an audio waveform
@@ -388,8 +347,6 @@ public:
 
     const float & getSampleRateInp()    const { return m_sampleRateInp; }
     const float & getSampleRateOut()    const { return m_sampleRateOut; }
-    const SampleFormat & getSampleFormatInp()  const { return m_sampleFormatInp; }
-    const SampleFormat & getSampleFormatOut()  const { return m_sampleFormatOut; }
 
     // Tx
 
@@ -398,37 +355,18 @@ public:
     static const TxProtocol & getTxProtocol(int id)  { return getTxProtocols().at(TxProtocolId(id)); }
     static const TxProtocol & getTxProtocol(TxProtocolId id) { return getTxProtocols().at(id); }
 
-    // get a list of the tones generated for the last waveform
-    //
-    //   Call this method after calling encode() to get a list of the tones participating in the generated waveform
-    //
-    const WaveformTones & getWaveformTones() { return m_waveformTones; }
-
-    bool takeTxAmplitudeI16(AmplitudeDataI16 & dst);
+    int takeTxAmplitudeDataI16(AmplitudeDataI16 & dst);
 
     // Rx
 
-    bool stopReceiving();
-    void setRxProtocols(const RxProtocols & rxProtocols) { m_rxProtocols = rxProtocols; }
-    const RxProtocols & getRxProtocols() const { return m_rxProtocols; }
+    void setRxProtocols(const TxProtocols & rxProtocols) { m_rxProtocols = rxProtocols; }
 
     const TxRxData & getRxData()            const { return m_rxData; }
-    const RxProtocol & getRxProtocol()      const { return m_rxProtocol; }
-    const RxProtocolId & getRxProtocolId()  const { return m_rxProtocolId; }
+    const TxProtocol & getRxProtocol()      const { return m_rxProtocol; }
+    const TxProtocolId & getRxProtocolId()  const { return m_rxProtocolId; }
 
     int takeRxData(TxRxData & dst);
-    bool takeRxSpectrum(SpectrumData & dst);
-    bool takeRxAmplitude(AmplitudeData & dst);
-
-    // compute FFT of real values
-    //
-    //   src - input real-valued data, size is N
-    //   dst - output complex-valued data, size is 2*N
-    //
-    //   d is scaling factor
-    //   N must be <= kMaxSamplesPerFrame
-    //
-    static bool computeFFTR(const float * src, float * dst, int N, float d);
+    bool takeSpectrum(SpectrumData & dst);
 
 private:
     void decode_fixed();
@@ -460,8 +398,6 @@ private:
     const int m_nMarkerFrames;
     const int m_encodedDataOffset;
 
-    const float m_soundMarkerThreshold;
-
     // common
 
     bool m_isFixedPayloadLength;
@@ -485,7 +421,6 @@ private:
     std::vector<float> m_fftOut; // complex
 
     bool m_hasNewSpectrum;
-    bool m_hasNewAmplitude;
     SpectrumData m_sampleSpectrum;
     AmplitudeData m_sampleAmplitude;
     AmplitudeData m_sampleAmplitudeResampled;
@@ -518,11 +453,9 @@ private:
     TxProtocol m_txProtocol;
 
     AmplitudeData m_outputBlock;
-    AmplitudeData m_outputBlockResampled;
     TxRxData m_outputBlockTmp;
     AmplitudeDataI16 m_outputBlockI16;
     AmplitudeDataI16 m_txAmplitudeDataI16;
-    WaveformTones m_waveformTones;
 
     // Impl
     // todo : move all members inside Impl

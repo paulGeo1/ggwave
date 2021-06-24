@@ -33,7 +33,6 @@ ggwave_Instance ggwave_init(const ggwave_Parameters parameters) {
             parameters.sampleRateInp,
             parameters.sampleRateOut,
             parameters.samplesPerFrame,
-            parameters.soundMarkerThreshold,
             parameters.sampleFormatInp,
             parameters.sampleFormatOut});
 
@@ -288,7 +287,6 @@ GGWave::GGWave(const Parameters & parameters) :
     m_sampleRateOut(parameters.sampleRateOut),
     m_samplesPerFrame(parameters.samplesPerFrame),
     m_isamplesPerFrame(1.0f/m_samplesPerFrame),
-    m_soundMarkerThreshold(parameters.soundMarkerThreshold),
     m_sampleSizeBytesInp(bytesForSampleFormat(parameters.sampleFormatInp)),
     m_sampleSizeBytesOut(bytesForSampleFormat(parameters.sampleFormatOut)),
     m_sampleFormatInp(parameters.sampleFormatInp),
@@ -818,23 +816,23 @@ int GGWave::takeRxData(TxRxData & dst) {
     return res;
 }
 
-// int GGWave::takeTxAmplitudeDataI16(AmplitudeDataI16 & dst) {
-//     if (m_txAmplitudeDataI16.size() == 0) return 0;
+int GGWave::takeTxAmplitudeDataI16(AmplitudeDataI16 & dst) {
+    if (m_txAmplitudeDataI16.size() == 0) return 0;
 
-//     int res = (int) m_txAmplitudeDataI16.size();
-//     dst = std::move(m_txAmplitudeDataI16);
+    int res = (int) m_txAmplitudeDataI16.size();
+    dst = std::move(m_txAmplitudeDataI16);
 
-//     return res;
-// }
+    return res;
+}
 
-// bool GGWave::takeSpectrum(SpectrumData & dst) {
-//     if (m_hasNewSpectrum == false) return false;
+bool GGWave::takeSpectrum(SpectrumData & dst) {
+    if (m_hasNewSpectrum == false) return false;
 
-//     m_hasNewSpectrum = false;
-//     dst = m_sampleSpectrum;
+    m_hasNewSpectrum = false;
+    dst = m_sampleSpectrum;
 
-//     return true;
-// }
+    return true;
+}
 
 //
 // Variable payload length
