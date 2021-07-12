@@ -44,6 +44,15 @@ extern "C" {
         GGWAVE_TX_PROTOCOL_DT_NORMAL,
         GGWAVE_TX_PROTOCOL_DT_FAST,
         GGWAVE_TX_PROTOCOL_DT_FASTEST,
+        GGWAVE_TX_PROTOCOL_DT_FASTEST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,
+        GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,
     } ggwave_TxProtocolId;
 
     // GGWave instance parameters
@@ -260,6 +269,14 @@ public:
             { GGWAVE_TX_PROTOCOL_DT_NORMAL,             { "[DT] Normal",  24,  9, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FAST,               { "[DT] Fast",    24,  6, 1, } },
             { GGWAVE_TX_PROTOCOL_DT_FASTEST,            { "[DT] Fastest", 24,  3, 1, } },
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_NORMAL,  { "18K",         384,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_1_FAST,    { "18K Fast",    384,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_NORMAL,  { "19.5K",       416,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_2_FAST,    { "19.5k Fast",  416,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_NORMAL,  { "21k",         448,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_3_FAST,    { "21k Fast",    448,  3, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_NORMAL,  { "22.5k",       480,  9, 1, }},
+            { GGWAVE_TX_PROTOCOL_ULTRASOUND_RANGE_4_FAST,    { "22.5k Fast",  480,  3, 1, }},
         };
 
         return kTxProtocols;
